@@ -23,12 +23,13 @@ const getContext = (websiteInfo: any) => {
 // 1. Gemini Endpoint
 app.post('/api/chat/gemini', async (req: Request, res: Response) => {
     try {
-        // Extract apiKey from the request body
-        const { message, websiteInfo, model, apiKey } = req.body;
+        // Extract apiKey from headers first, then body, then env
+        const apiKey = req.headers['x-gemini-api-key'] as string || req.body.apiKey || process.env.GEMINI_API_KEY;
+        const { message, websiteInfo, model } = req.body;
 
-        // Check if the user provided an API key
+        // Check if API key is found
         if (!apiKey) {
-            return res.status(400).json({ error: 'API key is required' });
+            return res.status(400).json({ error: 'API key is required in headers (x-gemini-api-key) or body' });
         }
 
         const context = getContext(websiteInfo);
@@ -69,12 +70,13 @@ app.post('/api/chat/gemini', async (req: Request, res: Response) => {
 // 2. OpenAI Endpoint
 app.post('/api/chat/openai', async (req: Request, res: Response) => {
     try {
-        // Extract apiKey from the request body
-        const { message, websiteInfo, model, apiKey } = req.body;
+        // Extract apiKey from headers first, then body, then env
+        const apiKey = req.headers['x-openai-api-key'] as string || req.body.apiKey || process.env.OPENAI_API_KEY;
+        const { message, websiteInfo, model } = req.body;
 
-        // Check if the user provided an API key
+        // Check if API key is found
         if (!apiKey) {
-            return res.status(400).json({ error: 'API key is required' });
+            return res.status(400).json({ error: 'API key is required in headers (x-openai-api-key) or body' });
         }
 
         const context = getContext(websiteInfo);
