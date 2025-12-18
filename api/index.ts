@@ -114,6 +114,14 @@ app.post('/api/chat/openai', async (req: Request, res: Response) => {
     }
 });
 
+// 3. Config Endpoint (Returns keys from .env)
+app.get('/api/config', (req: Request, res: Response) => {
+    res.json({
+        geminiApiKey: process.env.GEMINI_API_KEY || '',
+        openaiApiKey: process.env.OPENAI_API_KEY || ''
+    });
+});
+
 app.get('/', (req: Request, res: Response) => {
     res.send('Chatbot Backend is running');
 });
