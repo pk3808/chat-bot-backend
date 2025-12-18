@@ -111,15 +111,6 @@ app.post('/api/chat/openai', async (req: Request, res: Response) => {
     }
 });
 
-// 3. API Key Retrieval Endpoint (INSECURE - As requested by user)
-// WARNING: This exposes your server-side keys to the client.
-app.get('/api/config/keys', (req: Request, res: Response) => {
-    res.json({
-        geminiApiKey: process.env.GEMINI_API_KEY || '',
-        openaiApiKey: process.env.OPENAI_API_KEY || '',
-        warning: 'WARNING: EXPOSING API KEYS TO CLIENT IS INSECURE. USE SERVER-SIDE PROXYING INSTEAD.'
-    });
-});
 
 app.get('/', (req: Request, res: Response) => {
     res.send('Chatbot Backend is running');
