@@ -23,17 +23,18 @@ const getContext = (websiteInfo: any) => {
 // 1. Gemini Endpoint
 app.post('/api/chat/gemini', async (req: Request, res: Response) => {
     try {
-        const { message, websiteInfo, model } = req.body;
-        const apiKey = process.env.GEMINI_API_KEY;
+        // Extract apiKey from the request body
+        const { message, websiteInfo, model, apiKey } = req.body;
 
+        // Check if the user provided an API key
         if (!apiKey) {
-            return res.status(500).json({ error: 'Gemini API key not configured on server' });
+            return res.status(400).json({ error: 'API key is required' });
         }
 
         const context = getContext(websiteInfo);
         const geminiModel = (model && model.startsWith('gemini-')) ? model : 'gemini-2.0-flash';
 
-        // Use v1 API endpoint for stable models
+        // PASS THE USER'S API KEY IN THE URL
         const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/${geminiModel}:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: {
@@ -68,21 +69,23 @@ app.post('/api/chat/gemini', async (req: Request, res: Response) => {
 // 2. OpenAI Endpoint
 app.post('/api/chat/openai', async (req: Request, res: Response) => {
     try {
-        const { message, websiteInfo, model } = req.body;
-        const apiKey = process.env.OPENAI_API_KEY;
+        // Extract apiKey from the request body
+        const { message, websiteInfo, model, apiKey } = req.body;
 
+        // Check if the user provided an API key
         if (!apiKey) {
-            return res.status(500).json({ error: 'OpenAI API key not configured on server' });
+            return res.status(400).json({ error: 'API key is required' });
         }
 
         const context = getContext(websiteInfo);
         const defaultModel = model || 'gpt-3.5-turbo';
 
+        // PASS THE USER'S API KEY IN THE AUTHORIZATION HEADER
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
+                'Authorization': `Bearer ${apiKey}` // Use the user-provided key
             },
             body: JSON.stringify({
                 model: defaultModel,
@@ -110,7 +113,6 @@ app.post('/api/chat/openai', async (req: Request, res: Response) => {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
-
 
 app.get('/', (req: Request, res: Response) => {
     res.send('Chatbot Backend is running');
