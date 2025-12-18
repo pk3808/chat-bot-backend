@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import fetch from 'node-fetch';
+import crypto from 'crypto';
 
 dotenv.config();
 
@@ -10,6 +11,26 @@ const app = express();
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Helper to decrypt
+const decryptKey = (encryptedText: string): string => {
+    const secret = process.env.ENCRYPTION_SECRET || 'default_secret_please_change';
+    // Ensure key is 32 bytes
+    const key = crypto.createHash('sha256').update(String(secret)).digest();
+
+    try {
+        const textParts = encryptedText.split(':');
+        const iv = Buffer.from(textParts.shift()!, 'hex');
+        const encryptedData = Buffer.from(textParts.join(':'), 'hex');
+        const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+        let decrypted = decipher.update(encryptedData);
+        decrypted = Buffer.concat([decrypted, decipher.final()]);
+        return decrypted.toString();
+    } catch (error) {
+        console.error('Decryption failed:', error);
+        return '';
+    }
+}
 
 // Helper to get formatted context
 const getContext = (websiteInfo: any) => {
@@ -23,13 +44,21 @@ const getContext = (websiteInfo: any) => {
 // 1. Gemini Endpoint
 app.post('/api/chat/gemini', async (req: Request, res: Response) => {
     try {
-        // Extract apiKey from headers first, then body, then env
-        const apiKey = req.headers['x-gemini-api-key'] as string || req.body.apiKey || process.env.GEMINI_API_KEY;
+        let apiKey = req.headers['x-gemini-api-key'] as string || req.body.apiKey;
+
+        // Try decrypting if encrypted header is present
+        if (!apiKey && req.headers['x-encrypted-api-key']) {
+            apiKey = decryptKey(req.headers['x-encrypted-api-key'] as string);
+        }
+
+        // Fallback to Env
+        apiKey = apiKey || process.env.GEMINI_API_KEY;
+
         const { message, websiteInfo, model } = req.body;
 
         // Check if API key is found
         if (!apiKey) {
-            return res.status(400).json({ error: 'API key is required in headers (x-gemini-api-key) or body' });
+            return res.status(400).json({ error: 'API key is required (headers, encrypted header, body, or env)' });
         }
 
         const context = getContext(websiteInfo);
@@ -70,13 +99,21 @@ app.post('/api/chat/gemini', async (req: Request, res: Response) => {
 // 2. OpenAI Endpoint
 app.post('/api/chat/openai', async (req: Request, res: Response) => {
     try {
-        // Extract apiKey from headers first, then body, then env
-        const apiKey = req.headers['x-openai-api-key'] as string || req.body.apiKey || process.env.OPENAI_API_KEY;
+        let apiKey = req.headers['x-openai-api-key'] as string || req.body.apiKey;
+
+        // Try decrypting if encrypted header is present
+        if (!apiKey && req.headers['x-encrypted-api-key']) {
+            apiKey = decryptKey(req.headers['x-encrypted-api-key'] as string);
+        }
+
+        // Fallback to Env
+        apiKey = apiKey || process.env.OPENAI_API_KEY;
+
         const { message, websiteInfo, model } = req.body;
 
         // Check if API key is found
         if (!apiKey) {
-            return res.status(400).json({ error: 'API key is required in headers (x-openai-api-key) or body' });
+            return res.status(400).json({ error: 'API key is required (headers, encrypted header, body, or env)' });
         }
 
         const context = getContext(websiteInfo);
